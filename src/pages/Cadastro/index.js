@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Button, TextInput, Alert, SafeAreaView, Platform, ScrollView, TouchableOpacity } from 'react-native';
-import { getStatusBarHeight } from 'react-native-status-bar-height';
+import { StatusBar } from 'react-native';
 import { DatabaseConnection } from '../../database/database'
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 
+const db = new DatabaseConnection.getConnection;
 
 export default function NovoCadastro() {
     const [nome, setNome] = useState('');
     const [data_nasc, setData_nasc] = useState('');
-    const [telefone, setTelefone] = useState('');
+    const [numero, setNumero] = useState('');
     const [tipo, setTipo] = useState('');
 
 
@@ -17,11 +16,15 @@ export default function NovoCadastro() {
         if (nome.trim() === '' || nome === null) {
             Alert.alert('Erro', 'Insira um texto válido para o nome do cliente');
         }
-        if (telefone.trim() === '' || telefone === null) {
+        if (numero.trim() === '' || numero === null) {
             Alert.alert('Erro', 'Insira um texto válido para o telefone');
         }
         if (data_nasc.trim() === '' || data_nasc === null) {
             Alert.alert('Erro', 'Insira uma data válida')
+        }
+
+        if (tipo.trim() === '' || tipo === null) {
+            Alert.alert('Erro', 'Insira um tipo válido, sendo fixo ou celular.')
         }
 
         db.transaction(
@@ -48,7 +51,7 @@ export default function NovoCadastro() {
                     [numero, tipo],
                     (_, { rowsAffected }) => {
                         console.log(rowsAffected);
-                        setTelefone('');
+                        setNumero('');
                         setTipo('');
                     },
                     (_, error) => {
@@ -62,13 +65,13 @@ export default function NovoCadastro() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Cadastre um novo cliente</Text>
+            <Text style={styles.title}>Cadastre um novo cliente:</Text>
 
             <TextInput
                 style={styles.input}
                 value={nome}
                 onChangeText={setNome}
-                placeholder="Digite um novo nome"
+                placeholder="Digite o nome"
             />
 
             <TextInput
@@ -79,18 +82,18 @@ export default function NovoCadastro() {
 
             <TextInput
                 style={styles.input}
-                value={telefone}
-                onChangeText={setTelefone}
+                value={numero}
+                onChangeText={setNumero}
                 placeholder='Digite um telefone'></TextInput>
 
-                
+
             <TextInput
                 style={styles.input}
                 value={tipo}
                 onChangeText={setTipo}
-                placeholder='Digite o tipo de telefone'></TextInput>
+                placeholder='Digite o tipo de telefone (ex: celular ou fixo)'></TextInput>
 
-            <Button title="Adicionar" onPress={adicionaCliente} />
+            <Button color='green' title="Adicionar" onPress={adicionaCliente} />
 
             <StatusBar style="auto" />
         </View>
@@ -100,7 +103,7 @@ export default function NovoCadastro() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#D8BFD8',
+        backgroundColor: 'pink',
         alignItems: 'center',
         justifyContent: 'center',
         padding: 10,
@@ -116,5 +119,6 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         padding: 10,
         marginBottom: 20,
+        backgroundColor: 'pink',
     },
 });

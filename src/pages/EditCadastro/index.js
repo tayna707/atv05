@@ -1,137 +1,196 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Button, TextInput, Alert, SafeAreaView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, Platform, View, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { DatabaseConnection } from '../../database/database';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { getStatusBarHeight } from 'react-native-status-bar-height';
-import { DatabaseConnection } from '../../database/database'
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
-import { useNavigation, useRoute } from '@react-navigation/native'
 
-import ExibeTodos from '../ExibeTodos/index';
+const db = DatabaseConnection.getConnection();
 
+export default function EditCadastro() {
+  const navigation = useNavigation();
 
-const db = new DatabaseConnection.getConnection;
+  const [cliente, setCliente] = useState(null);
+  const [nome, setNome] = useState('');
+  const [data_nasc, setData_nasc] = useState('');
+  const [numero, setNumero] = useState('');
+  const [tipo, setTipo] = useState('')
+  const [modalVisible, setModalVisible] = useState(false);
+  const { id } = route.params;
+  const route = useRoute();
 
-export default function EditCadastro () {
-    const route = useRoute();
-    const navigation = useNavigation();
+  useEffect(() => {
+    Cliente();
+  }, []);
 
-    const [id, setId] = useState(route.params?.id)
-    const [nome, setNome] = useState(route.params?.nome)
-    const [data_nasc, setData_nasc] = useState(route.params?.data_nasc)
-    const [numero, setNumero] = useState(route.params?.numero)
-    const [tipo, setTipo] = useState(route.params?.tipo)
-
-    const salvarRegistro = () => {
-        if (nome.trim() === '') {
-            Alert.alert('Erro', 'O nome deve ser preenchido');
-            return;
-        }
-        if (data_nasc.trim() === '') {
-        Alert.alert('Erro', 'A data de nascimento deve ser preenchido');
-    return;
-        }
-        if (telefone.trim() === '') {
-        Alert.alert ('Erro', 'O telefone deve preenchido');
-        return;
-
-    }
-    db.transaction(
-        tx => {
-          tx.executeSql(
-            'UPDATE tbl_clientes SET nome=?, data_nasc=? WHERE id=?',
-            [nome, data_nasc],
-            (_, { rowsAffected }) => {
-              console.log(rowsAffected);
-              setNome('');
-              setData_nasc('');
-              Alert.alert('Info', 'Registro alterado com sucesso',
-                [
-                  {
-                    onPress: () => {
-                      navigation.navigate('ExibeTodos');
-                    }
-                  }]);
-  
-            },
-            (_, error) => {
-              console.error('Erro ao editar o registro:', error);
-              Alert.alert('Erro', 'Ocorreu um erro ao editar o registro.');
-            }
-          );
+  const Cliente = () => {
+    db.transaction(tx => {
+      tx.executeSql(
+        'SELECT cli.nome, cli.data_nasc, tel.numero, tel.tipo FROM tbl_clientes cli LEFT JOIN telefones_has_clientes tc ON cli.id = tc.cliente_id LEFT JOIN tbl_telefones tel ON tc.telefone_id = tel.id WHERE cli.id = ?',
+        [id],
+        (_, { rows }) => {
+          if (rows.length > 0) {
+            setCliente(rows.item(0));
+            setNome(rows.item(0).nome);
+            setData_nasc(rows.item(0).data_nasc);
+            setTelefone(rows.item(0).numero);
+            setTipo(rows.item(0).tipo);
+          } else {
+            Alert.alert('Erro', 'Cliente não encontrado.');
+            navigation.goBack();
+          }
+        },
+        (_, error) => {
+          Alert.alert('Erro', 'Erro ao buscar cliente.');
+          console.error(error);
+          navigation.goBack();
         }
       );
-      db.transaction(
-        tx => {
-          tx.executeSql(
-            'UPDATE tbl_telefones SET numero=?, tipo=? WHERE id=?',
-            [numero, tipo],
-            (_, { rowsAffected }) => {
-              console.log(rowsAffected);
-              setNumero('');
-              setTipo('');
-              Alert.alert('Info', 'Registro alterado com sucesso',
-                [
-                  {
-                    onPress: () => {
-                      navigation.navigate('ExibeTodos');
-                    }
-                  }]);
-  
-            },
-            (_, error) => {
-              console.error('Erro ao editar o registro:', error);
-              Alert.alert('Erro', 'Ocorreu um erro ao editar o registro.');
-            }
-        )})
-      };
-      
-  
-    return (
-        <SafeAreaProvider>
-          <SafeAreaView style={styles.androidSafeArea}>
-            <View style={styles.container}>
-    
-              <View style={styles.viewTitle}>
-                <Text style={styles.title}>Editar registro</Text>
-              </View>
-    
-              <TextInput
-                style={styles.input}
-                value={nome}
-                onChangeText={setNome}
-                placeholder="Informe o nome do cliente"
-              />
-              <TextInput 
-              style={styles.input}
-              value={data_nasc}
-              onChangeText={setData_nasc}
-              placeholder='Informe a data de nascimento'
-              />
-              <TouchableOpacity
-                onPress={salvarRegistro}>
-                <Text>Salvar</Text>
-                <FontAwesome6 name='check' size={32} color="#FFF" />
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
-        </SafeAreaProvider>
-            );
-        }
-    
-  
-    const styles = StyleSheet.create({
-        androidSafeArea: {
-          flex: 1,
-          alignItems: 'center',
-          paddingTop: Platform.OS === 'android' ? getStatusBarHeight() : 0,
-          marginTop: 10
+    });
+  };
+
+  const handleGoBack = () => {
+    navigation.goBack();
+  };
+
+  const alteraCliente = () => {
+    db.transaction(tx => {
+      tx.executeSql(
+        'UPDATE tbl_clientes SET nome = ?, data_nasc = ? WHERE id = ?',
+        [nome, data_nasc, id],
+        () => {
+          Alert.alert('Info', 'Cliente atualizado com sucesso.');
+          setModalVisible(false);
+          loadCliente();
         },
-        container: {
-          width: '90%',
-          backgroundColor: 'purple',
-          padding: 15,
-          gap: 10,
-          borderRadius: 10,
-          elevation: 5
+        (_, error) => {
+          Alert.alert('Erro', 'Erro ao atualizar cliente.');
+          console.error(error);
         }
-        });
+      );
+      tx.executeSql(
+        'UPDATE tbl_telefones SET numero = ?, tipo = ? where id = ?',
+        [telefone, tipo, id]
+      )
+    });
+  };
+
+  const deletaCliente = () => {
+    Alert.alert(
+      'Atenção',
+      'Tem certeza de que deseja excluir este cliente?',
+      [
+        {
+          text: 'Cancelar',
+        },
+        {
+          text: 'Confirmar',
+          onPress: () => {
+            db.transaction(tx => {
+              tx.executeSql(
+                'DELETE FROM telefones_has_clientes WHERE cliente_id = ?',
+                [id],
+                (_, { rowsAffected }) => {
+                  console.log(`${rowsAffected} registro na tabela excluído com sucesso.`);
+                  tx.executeSql(
+                    'DELETE FROM tbl_telefones WHERE id = ?',
+                    [id],
+                    (_, { rowsAffected }) => {
+                      console.log(`${rowsAffected} número de telefone excluído com sucesso.`);
+                      tx.executeSql(
+                        'DELETE FROM tbl_clientes WHERE id = ?',
+                        [id],
+                        (_, { rowsAffected }) => {
+                          Alert.alert('Info', `${rowsAffected} cliente excluído com sucesso.`);
+                          navigation.goBack();
+                        },
+                        (_, error) => {
+                          Alert.alert('Erro', 'Erro ao excluir cliente.');
+                          console.error(error);
+                        }
+                      );
+                    },
+                    (_, error) => {
+                      console.error('Erro ao excluir o número', error);
+                    }
+                  );
+                },
+                (_, error) => {
+                  console.error('Erro ao excluir o registro na tabela', error);
+                }
+              );
+            });
+          },
+        },
+      ],
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.androidSafeArea}>
+      <View>
+        <TouchableOpacity onPress={deletaCliente}>
+          <Text>Excluir</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <Text>Editar</Text>
+        </TouchableOpacity>
+      </View>
+      <TouchableOpacity onPress={handleGoBack}>
+        <Text>Voltar</Text>
+      </TouchableOpacity>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => {
+          setModalVisible(false);
+        }}
+      >
+        <View>
+          <View>
+            <Text>Editar Cliente</Text>
+            <TextInput
+              placeholder="Nome"
+              value={nome}
+              onChangeText={text => setNome(text)}
+            />
+            <TextInput
+              placeholder="Data de Nascimento"
+              value={data_nasc}
+              onChangeText={text => setData_nasc(text)}
+            />
+            <TextInput
+              placeholder="Telefone"
+              value={numero}
+              onChangeText={text => setNumero(text)}
+            />
+            <TextInput
+              placeholder="Tipo"
+              value={tipo}
+              onChangeText={text => setTipo(text)}
+            />
+            <TouchableOpacity onPress={alteraCliente}>
+              <Text>Salvar Alteração</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <Text>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+
+const styles = StyleSheet.create({
+  androidSafeArea: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? getStatusBarHeight() : 0,
+    marginTop: 10,
+    backgroundColor: 'pink',
+    padding: 15,
+    gap: 10,
+  }
+});
